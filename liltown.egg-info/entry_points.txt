@@ -1,0 +1,2 @@
+[console_scripts]
+liltown = liltown.cli:main
