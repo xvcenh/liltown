@@ -12,3 +12,5 @@ liltown.egg-info/dependency_links.txt
 liltown.egg-info/entry_points.txt
 liltown.egg-info/requires.txt
 liltown.egg-info/top_level.txt
+tests/test_characters.py
+tests/test_chat.py

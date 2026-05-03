@@ -153,6 +153,6 @@ Keep it brief and heartwarming. No conflict unless it fits their personalities. 
 
     def advance_time(self, hours=1):
         self.time += hours
-        if self.time >= 24:
+        while self.time >= 24:
             self.time -= 24
             self.day += 1
