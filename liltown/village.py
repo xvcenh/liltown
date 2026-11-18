@@ -22,7 +22,6 @@ class VillageRenderer:
         self.chat = ChatEngine()
         self.log = []  # Recent events/chat
         self.weather = random.choice(["☀️ Sunny", "🌤️ Partly cloudy", "🌧️ Light rain", "🌈 Rainbow", "🌙 Starry night"])
-        self.season = "Spring 🌸"
         self.active_chars = []
 
     def _build_village_scene(self):
@@ -53,14 +52,21 @@ class VillageRenderer:
         return "\n".join(lines)
 
     def _recent_log(self, max_lines=8):
-        """Show recent events/chat."""
+        """Show newest entries first, treating model dialogue as literal text."""
+        text = Text()
         if not self.log:
-            return "[dim italic]The village is quiet... waiting for life to begin.[/dim italic]"
-        
-        lines = []
-        for entry in self.log[-max_lines:]:
-            lines.append(f"[dim]Day {entry['day']} {entry['time']:02d}:00[/dim] {entry['text']}")
-        return "\n".join(lines)
+            return Text("The village is quiet... waiting for life to begin.", style="dim italic")
+        for entry in reversed(self.log[-max_lines:]):
+            if text:
+                text.append("\n")
+            text.append(f"Day {entry['day']} {entry['time']:02d}:00 ", style="dim")
+            text.append(entry["text"])
+        return text
+
+    @property
+    def season(self):
+        seasons = ("Spring 🌸", "Summer 🌻", "Autumn 🍂", "Winter ❄️")
+        return seasons[((self.chat.day - 1) // 7) % len(seasons)]
 
     def _weather_panel(self):
         return f"{self.weather}  |  Day {self.chat.day}  |  {self.season}"
@@ -71,7 +77,7 @@ class VillageRenderer:
         layout.split_column(
             Layout(name="header", size=3),
             Layout(name="main", ratio=1),
-            Layout(name="footer", size=3)
+            Layout(name="footer", size=max(4, min(12, self.console.height // 3)))
         )
         
         layout["main"].split_row(
@@ -94,7 +100,7 @@ class VillageRenderer:
         layout["sidebar"].update(Panel(char_text, title="👥 Villagers", border_style="magenta"))
         
         # Footer — recent log
-        log_text = Text.from_markup(self._recent_log())
+        log_text = self._recent_log()
         layout["footer"].update(Panel(log_text, title="💬 Recent Happenings", border_style="cyan"))
         
         return layout

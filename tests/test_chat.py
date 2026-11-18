@@ -77,3 +77,21 @@ class TestChatEngine:
         prompt = engine._build_prompt("maple", "ember")
         assert "acquainted with" in prompt
         assert "(3/10)" in prompt
+
+
+def test_offline_encounters_update_each_villages_own_relationships():
+    engine = ChatEngine()
+    engine._fallback_chat("maple", "ember")
+    assert "(4/10)" in engine._build_prompt("maple", "ember")
+    assert "(3/10)" in ChatEngine()._build_prompt("maple", "ember")
+
+
+def test_recent_dialogue_is_literal_and_newest_first():
+    from liltown.village import VillageRenderer
+
+    village = VillageRenderer()
+    village.add_event("older")
+    village.add_event("[/bold] latest")
+    assert village._recent_log().plain.index("[/bold] latest") < village._recent_log().plain.index("older")
+    village.chat.advance_time(24 * 7)
+    assert village.season.startswith("Summer")

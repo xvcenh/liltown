@@ -1,7 +1,9 @@
 """AI Chat engine — autonomous character conversations powered by LLM."""
 
-import random
+import asyncio
 import os
+import random
+from collections import deque
 from .characters import CHARACTERS, get_relation_name
 
 
@@ -12,7 +14,8 @@ class ChatEngine:
         self.api_endpoint = api_endpoint or os.environ.get("LLM_ENDPOINT", "https://api.deepseek.com/v1")
         self.api_key = api_key or os.environ.get("LLM_KEY", "")
         self.model = model or os.environ.get("LLM_MODEL", "deepseek-chat")
-        self.history = []  # Recent conversation log
+        self.history = deque(maxlen=100)
+        self.relations = {cid: dict(char.get("relations", {})) for cid, char in CHARACTERS.items()}
         self.day = 1
         self.time = 8  # 0-23
 
@@ -20,7 +23,7 @@ class ChatEngine:
         c1 = CHARACTERS[char1_id]
         c2 = CHARACTERS[char2_id]
         
-        rel_score = c1.get("relations", {}).get(char2_id, 0)
+        rel_score = self.relations[char1_id].get(char2_id, 0)
         rel_name = get_relation_name(rel_score)
         
         prompt = f"""You are generating dialogue for a cozy terminal village game called Liltown.
@@ -57,42 +60,14 @@ Keep it brief and heartwarming. No conflict unless it fits their personalities. 
         return prompt
 
     async def generate_chat(self, char1_id, char2_id, context=""):
-        """Generate a conversation between two characters using the LLM."""
-        if not self.api_key:
-            return self._fallback_chat(char1_id, char2_id)
+        """Use the same provider, timeout and offline fallback as the CLI."""
+        return await asyncio.to_thread(self.generate_chat_sync, char1_id, char2_id, context)
 
-        prompt = self._build_prompt(char1_id, char2_id, context)
-        
-        messages = [
-            {"role": "system", "content": "You are a dialogue generator for a cozy village game. Generate warm, natural conversations. Keep it short (4-6 lines)."},
-            {"role": "user", "content": prompt}
-        ]
-        
-        try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    f"{self.api_endpoint}/chat/completions",
-                    headers={
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {self.api_key}"
-                    },
-                    json={
-                        "model": self.model,
-                        "messages": messages,
-                        "temperature": 0.9,
-                        "max_tokens": 300
-                    }
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        text = data["choices"][0]["message"]["content"]
-                        self.history.append({"char1": char1_id, "char2": char2_id, "text": text, "time": self.time})
-                        return text
-        except Exception as e:
-            pass
-        
-        return self._fallback_chat(char1_id, char2_id)
+    def _record(self, char1_id, char2_id, text):
+        self.history.append({"char1": char1_id, "char2": char2_id, "text": text, "time": self.time})
+        for source, target in ((char1_id, char2_id), (char2_id, char1_id)):
+            self.relations[source][target] = min(10, self.relations[source].get(target, 0) + 1)
+        return text
 
     def generate_chat_sync(self, char1_id, char2_id, context=""):
         """Synchronous version using requests."""
@@ -125,8 +100,8 @@ Keep it brief and heartwarming. No conflict unless it fits their personalities. 
             if resp.status_code == 200:
                 data = resp.json()
                 text = data["choices"][0]["message"]["content"]
-                self.history.append({"char1": char1_id, "char2": char2_id, "text": text, "time": self.time})
-                return text
+                if isinstance(text, str) and text.strip():
+                    return self._record(char1_id, char2_id, text)
         except Exception:
             pass
         
@@ -147,9 +122,7 @@ Keep it brief and heartwarming. No conflict unless it fits their personalities. 
             f"{c1['name']}: *reading quietly* ...oh! Hello there.\n{c2['name']}: What are you reading? Your face was so peaceful just now.",
         ]
         
-        text = random.choice(templates)
-        self.history.append({"char1": char1_id, "char2": char2_id, "text": text, "time": self.time})
-        return text
+        return self._record(char1_id, char2_id, random.choice(templates))
 
     def advance_time(self, hours=1):
         self.time += hours

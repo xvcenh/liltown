@@ -1,6 +1,7 @@
 """Liltown CLI — run your cozy terminal village."""
 
 import argparse
+import math
 import os
 import time
 import threading
@@ -45,6 +46,8 @@ def main():
     )
     
     args = parser.parse_args()
+    if not math.isfinite(args.interval) or args.interval <= 0:
+        parser.error("--interval must be a positive finite number")
     
     # Setup
     village = VillageRenderer()
