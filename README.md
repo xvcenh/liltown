@@ -9,7 +9,7 @@ Watch 8 unique villagers go about their day in a beautiful terminal scene. They 
 
 ## ✨ Features
 
-- 🎨 **Beautiful Terminal UI** — Rich-powered ASCII art village with live updates
+- 🎨 **Beautiful Terminal UI** — Rich-powered ASCII art village with live updates and a compact roster for narrow terminals
 - 👥 **8 Unique Characters** — Librarian, musician, baker, mail carrier, blacksmith, herbalist, village elder, and a newcomer
 - 💬 **AI-Powered Conversations** — Characters autonomously chat using your LLM (DeepSeek, OpenAI, or any compatible API)
 - ❤️ **Relationship System** — Characters form friendships, with relationship scores that affect dialogue

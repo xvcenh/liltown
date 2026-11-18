@@ -4,11 +4,9 @@ import argparse
 import math
 import os
 import time
-import threading
 from rich.console import Console
 from rich.live import Live
 from rich.panel import Panel
-from rich.text import Text
 from .village import VillageRenderer
 
 console = Console()
@@ -74,12 +72,11 @@ def main():
     village.add_event("🌅 The sun rises over Liltown. A new day begins.")
     
     # Run village loop
-    stop_event = threading.Event()
     live = Live(village.render(), console=console, refresh_per_second=4, screen=True)
     
     try:
         with live:
-            while not stop_event.is_set():
+            while True:
                 time.sleep(args.interval)
                 village.tick()
                 live.update(village.render())

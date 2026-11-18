@@ -95,3 +95,17 @@ def test_recent_dialogue_is_literal_and_newest_first():
     assert village._recent_log().plain.index("[/bold] latest") < village._recent_log().plain.index("older")
     village.chat.advance_time(24 * 7)
     assert village.season.startswith("Summer")
+
+
+def test_small_terminal_keeps_roster_and_dialogue_visible():
+    from io import StringIO
+    from rich.console import Console
+    from liltown.village import VillageRenderer
+
+    village = VillageRenderer()
+    output = StringIO()
+    village.console = Console(file=output, width=42, height=18, color_system=None)
+    village.add_event("A new conversation.")
+    village.console.print(village.render())
+    frame = output.getvalue()
+    assert "Maple" in frame and "Ember" in frame and "A new conversation." in frame

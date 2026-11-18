@@ -1,16 +1,12 @@
 """Terminal village rendering — cozy ASCII art scene with Rich."""
 
 import random
-import time
 from rich.console import Console
-from rich.live import Live
 from rich.panel import Panel
-from rich.table import Table
 from rich.layout import Layout
 from rich.text import Text
 from rich.align import Align
-from rich.box import ROUNDED, SIMPLE
-from .characters import CHARACTERS, RELATION_NAMES, get_relation_name
+from .characters import CHARACTERS
 from .chat import ChatEngine
 
 
@@ -80,25 +76,24 @@ class VillageRenderer:
             Layout(name="footer", size=max(4, min(12, self.console.height // 3)))
         )
         
-        layout["main"].split_row(
-            Layout(name="scene", ratio=2),
-            Layout(name="sidebar", ratio=1)
-        )
-        
-        # Header
-        header_text = Text("🏡 Liltown — A Cozy Terminal Village", style="bold yellow")
-        layout["header"].update(Panel(Align.center(header_text), border_style="yellow"))
-        
-        # Village scene
-        scene_text = Text(self._build_village_scene(), style="green")
-        weather_text = Text(self._weather_panel(), style="italic cyan")
-        scene_content = Text.assemble(scene_text, "\n\n", weather_text)
-        layout["scene"].update(Panel(scene_content, title="🌍 Village", border_style="green", padding=(0, 2)))
-        
-        # Sidebar — character list
-        char_text = Text.from_markup(self._character_list())
-        layout["sidebar"].update(Panel(char_text, title="👥 Villagers", border_style="magenta"))
-        
+        compact = self.console.width < 78 or self.console.height < 21
+        header_text = "🏡 Liltown" if compact else "🏡 Liltown — A Cozy Terminal Village"
+        layout["header"].update(Panel(Align.center(Text(header_text, style="bold yellow")), border_style="yellow"))
+        if compact:
+            roster = Text(self._weather_panel() + "\n\n", style="italic cyan")
+            for cid, character in CHARACTERS.items():
+                is_active = cid in self.active_chars
+                roster.append(character["name"] + "  ", style="bold cyan" if is_active else "white")
+            layout["main"].update(Panel(roster, title="👥 Villagers", border_style="green"))
+        else:
+            layout["main"].split_row(Layout(name="scene", ratio=2), Layout(name="sidebar", ratio=1))
+            art = Text(self._build_village_scene(), style="green")
+            weather = Text(self._weather_panel(), style="italic cyan")
+            layout["scene"].update(Panel(Text.assemble(art, "\n\n", weather), title="🌍 Village",
+                                         border_style="green", padding=(0, 2)))
+            roster = Text.from_markup(self._character_list())
+            layout["sidebar"].update(Panel(roster, title="👥 Villagers", border_style="magenta"))
+
         # Footer — recent log
         log_text = self._recent_log()
         layout["footer"].update(Panel(log_text, title="💬 Recent Happenings", border_style="cyan"))
